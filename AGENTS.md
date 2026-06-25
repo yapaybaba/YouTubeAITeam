@@ -104,19 +104,37 @@ class AgentState(TypedDict):
 
 ```
 YouTubeAITeam/
-├── agents.py          # ResearcherAgent, CoderAgent, ReviewerAgent
-├── main.py            # LangGraph pipeline tanımı
-├── state.py           # AgentState TypedDict
-├── output.py          # Çıktı formatlama katmanı
-├── requirements.txt   # Python bağımlılıkları
-├── AGENTS.md          # Bu dosya
-├── PROGRESS.md        # İlerleme kaydı
+├── agents.py              # ResearcherAgent, CoderAgent, ReviewerAgent
+├── main.py                # LangGraph pipeline tanımı
+├── state.py               # AgentState TypedDict
+├── output.py              # CoderAgent demo çıktısı (Pydantic AI RAG örneği)
+├── requirements.txt       # Python bağımlılıkları
+├── AGENTS.md              # Bu dosya — ajan ve skill tanımları
+├── PROGRESS.md            # İlerleme kaydı
 └── docs/
-    ├── wiki/          # Otonom bilgi grafiği (AI tarafından yazılır)
-    │   ├── Index.md
-    │   ├── Videos.md
-    │   └── *.md
-    └── skills/        # Claude Code skill tanımları
+    ├── wiki/              # Otonom bilgi grafiği (AI tarafından yazılır)
+    │   ├── Index.md       # Ana harita
+    │   ├── Videos.md      # Analiz edilen YouTube videoları
+    │   ├── wiki_schema.md # Wiki yazma kuralları (bu projenin CLAUDE.md'si)
+    │   └── *.md           # Modül ve video sayfaları
+    └── skills/            # Bağımsız skill araçları
         └── ingest/
-            └── SKILL.md
+            ├── SKILL.md   # Claude Code talimatları (skill wrapper)
+            └── ingest.py  # Git diff → wiki CLI aracı (çalıştırılabilir)
+
+# Harici Skill'ler (ayrı repo)
+~/Watch_Youtube_Skill/
+├── watch_youtube/         # Python paketi
+│   ├── main.py            # CLI entry point (watch-youtube komutu)
+│   ├── downloader.py      # yt-dlp + Groq Whisper transcript
+│   ├── analyzer.py        # spaCy NLP + TF-IDF keyword store
+│   ├── extractor.py       # ffmpeg frame extraction
+│   └── compiler.py        # Pillow storyboard grid
+├── data/
+│   └── keyword_store.json # TF-IDF öz-öğrenme verisi
+└── .claude/skills/
+    ├── watch-youtube/
+    │   └── SKILL.md       # YouTube analiz skill talimatları
+    └── wiki-schema/
+        └── SKILL.md       # Wiki format kuralları (genel, tüm projeler için)
 ```
