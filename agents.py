@@ -12,7 +12,15 @@ class ResearcherAgent:
         console.print(f"\n[bold cyan]>[/bold cyan] [bold cyan]Araştırmacı:[/bold cyan] {state['target_url']} kazılıyor...")
         async with AsyncWebCrawler() as crawler:
             result = await crawler.arun(url=state["target_url"])
-            markdown_content = result.markdown
+            raw = result.markdown.raw_markdown
+            # Navigasyon linklerini ([text](url) formatındaki satırları) strip et
+            lines = raw.split("\n")
+            content_lines = [
+                line for line in lines
+                if not (line.strip().startswith("[") and "](" in line)
+                and not (line.strip().startswith("* [") or line.strip().startswith("- ["))
+            ]
+            markdown_content = "\n".join(content_lines).strip()
 
             return {"scraped_data": markdown_content, "iteration": 0, "feedback": ""}
 
