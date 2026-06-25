@@ -14,5 +14,8 @@
 ## Proje & Ürünler
 - [[ClaudeDesignAjans]] — Yerel çalışan Claude Design alternatifi, multi-agent dijital ajans
 
+## Sistem
+- [[wiki_schema]] — Wiki yazma kuralları: codebase + video sayfası formatları, timestamp linkleri
+
 ## Video Kaydı
 - [[Videos]] — Analiz edilen tüm videoların listesi
