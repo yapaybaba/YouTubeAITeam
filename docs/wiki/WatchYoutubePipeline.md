@@ -1,32 +1,40 @@
-**Özet:** `watch-youtube` CLI, YouTube videolarını storyboard JPEG'lerine dönüştürüp Vision LLM ile analiz eden bir pipeline. Transcript yoksa 30 saniyelik aralıklarla sentetik timestamp'ler üretiyor; keyword store'u TF-IDF ile kendi kendine öğrenerek güncelliyor.
-**Kütüphaneler/Teknolojiler:** yt-dlp, ffmpeg, spaCy, Pillow, scikit-learn (TF-IDF), Groq Whisper API
-**Bağlantılar:** [[WatchYoutubeKurulum]], [[ClaudeDesignAjans]], [[SentetikTimestamp]]
+**Özet:** `watch-youtube` CLI, YouTube altyazısını NLP ile analiz edip sadece önemli anlarda kare çeken, bunları Vision LLM'e sıkıştıran bir pipeline. Token maliyetini %80'in üzerinde düşürüyor; transcript yoksa Groq Whisper ile audio'dan üretiyor.
+**Kütüphaneler/Teknolojiler:** yt-dlp, ffmpeg, spaCy, Pillow, scikit-learn (TF-IDF), Groq Whisper API (`whisper-large-v3-turbo`)
+**Bağlantılar:** [[LangGraphLocalLLM]], [[PythonMimarisi]], [[SentetikTimestamp]]
 
 ## Pipeline Adımları
 
-1. **Transcript İndir** — yt-dlp ile VTT/SRT; başarısız olursa Groq Whisper; her ikisi de yoksa sentetik 30s intervallar
+1. **Transcript İndir** — yt-dlp ile VTT/SRT; YouTube 429 verirse Groq Whisper (audio indir → `/openai/v1/audio/transcriptions`); her ikisi de yoksa sentetik 30s intervallar
 2. **Akıllı Timestamp Çıkar** — spaCy keyword eşleştirme (Rule A) + sessizlik boşluğu tespiti (Rule B)
 3. **Frame Çıkar** — ffmpeg ile seçilen timestamp'lerde kare al
 4. **Storyboard Derle** — Pillow ile grid layout; adaptif çözünürlük (720–1280px)
+5. **Vision LLM Analizi** — Claude Code storyboard'u okur, wiki sayfası yazar
+
+## Akıllı Timestamp Mantığı (Transcript'ten)
+
+> "Altyazıyı NLP ile analiz edip sadece ve sadece ekranda önemli bir şey olduğu anlarda fotoğraf çeken ve bunları akıllıya sıkıştıran bir pipeline."
+
+- **Rule A:** `pipeline`, `terminal`, `diagram`, `code`, `chart` gibi deictic keyword'ler
+- **Rule B:** Konuşmacının susdugu sessizlik boşlukları (diyagram geçişleri, slayt değişimleri)
+
+## Whisper Entegrasyonu
+
+Groq API dict-tabanlı segment döndürür — `seg.text` değil `seg["text"]` kullanılmalı:
+
+```python
+raw = seg["text"] if isinstance(seg, dict) else seg.text
+start = seg["start"] if isinstance(seg, dict) else seg.start
+```
 
 ## Sentetik Timestamp Fallback
 
-Transcript indirme 429 (Rate Limit) alırsa pipeline durmaz:
-- `downloader.py`: `DownloadError` yakalanıp `(None, "none")` döndürülür
-- `main.py`: Boş entries + `synthetic` source varsa video süresinden 30s aralıklarla timestamp üretilir
+429 → `(None, "none")` → `main.py`'de video süresine göre 30s intervallar:
+
+```python
+timestamps = [SmartTimestamp(time_sec=float(t), ...) for t in range(30, int(duration), 30)]
+```
 
 ## Keyword Store (Kendi Kendine Öğrenme)
 
-- `data/keyword_store.json` içinde saklanır
-- Her video sonrası TF-IDF ile yeni keyword adayları çıkarılır
-- Bigram threshold: 0.05 | Unigram threshold: 0.15
-- 3+ görülme sonrası ağırlık 0.8'e çıkar ("promote")
-
-## Grid Boyutları
-
-| Frame | Grid | Cell |
-|-------|------|------|
-| 1 | 1×1 | 1280px |
-| 3–4 | 2×2 | 960px |
-| 7–9 | 3×3 | 720px |
-| 13+ | 3×3 (çok sayfalı) | 720px |
+TF-IDF ile seçilen frame çevresindeki transcript segmentlerinden yeni keyword adayı çıkarılır.
+- Bigram threshold: 0.05 | Unigram threshold: 0.15 | Promote: 3+ görülme → weight 0.8
